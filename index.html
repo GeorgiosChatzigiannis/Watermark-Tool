@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Advanced Watermark Tool (Modern UI with i18n)</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    /* =============
+       GLOBAL STYLES
+       ============= */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Open Sans', sans-serif;
+      background: linear-gradient(135deg, #EEF2F7 0%, #D9E4EC 100%);
+      color: #2D3436;
+      overflow-x: hidden;
+    }
+    
+    h1 {
+      text-align: center;
+      margin: 20px 0;
+      font-weight: 700;
+      color: #2D3436;
+      font-size: 2rem;
+    }
+
+    /* Steps container */
+    .step {
+      display: none;
+      margin: 20px auto;
+      padding: 20px;
+      border-radius: 12px;
+      max-width: 800px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      transition: all 0.3s ease;
+    }
+    .active {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Titles & headings */
+    h2 {
+      margin-top: 0;
+      text-align: center;
+      font-weight: 600;
+      color: #333;
+    }
+    h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #444;
+    }
+
+    /* Buttons */
+    button {
+      background-color: #457b9d;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.2s;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    button:hover {
+      background-color: #35607a;
+      transform: translateY(-1px);
+    }
+
+    /* Nav buttons container */
+    .nav-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+
+    /* Thumbnails */
+    #thumbnails {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .thumbnail {
+      border: 2px solid #ddd;
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 6px;
+      transition: transform 0.2s;
+    }
+    .thumbnail:hover {
+      transform: scale(1.05);
+    }
+
+    /* Canvas styling */
+    #canvas {
+      border: 2px solid #ccc;
+      background: #fff;
+      margin: 20px auto;
+      display: block;
+      max-width: 600px;
+      max-height: 400px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    /* Controls layout */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .controls label {
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+      font-weight: 500;
+      gap: 4px;
+    }
+
+    /* Range inputs */
+    input[type=range] {
+      cursor: pointer;
+      accent-color: #457b9d;
+    }
+
+    /* Step cards for Watermark Settings */
+    .watermark-block {
+      margin-top: 15px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+      transition: all 0.3s ease;
+    }
+
+    /* Step 3 preview */
+    #adjustCanvas {
+      border: 2px dashed #aaa;
+      max-width: 600px;
+      display: block;
+      margin: 20px auto;
+      border-radius: 8px;
+    }
+
+    /* File input styling (just minimal) */
+    input[type=file] {
+      font-size: 0.9rem;
+    }
+
+    /* Progress bar container */
+    #progressContainer {
+      margin-top:20px;
+      text-align: center;
+    }
+    #progressText {
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+    progress {
+      width: 50%;
+      height: 18px;
+    }
+
+    /* Additional subtle styles */
+    select {
+      padding: 4px 6px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    input[type=number], input[type=text], input[type=color] {
+      padding: 4px 6px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    p {
+      font-size: 0.9rem;
+      line-height: 1.4;
+      color: #555;
+    }
+
+    #infoText {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #555;
+    }
+
+    /* Manage steps heading alignment */
+    #step1 h2, #step2 h2, #step3 h2, #step4 h2 {
+      text-align: center;
+    }
+
+    .fadeIn {
+      animation: fadeIn 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <!-- Language Selector -->
+  <div style="display:flex; justify-content:flex-end; padding:10px; max-width:800px; margin:0 auto;">
+    <label style="font-weight:600; margin-right:8px;">Language:</label>
+    <select id="languageSelect">
+      <option value="gr" selected>Ελληνικά</option>
+      <option value="en">English</option>
+    </select>
+  </div>
+
+  <h1 id="titleMain">Advanced Watermark Tool</h1>
+
+  <!-- STEP 1: Upload Images -->
+  <div id="step1" class="step active">
+    <h2 id="step1Title">Step 1: Upload Images</h2>
+    <p id="step1Description">Select multiple files or an entire folder:</p>
+    <select id="uploadMode">
+      <option value="files" selected>Multiple Files</option>
+      <option value="folder">Entire Folder</option>
+    </select>
+    <p id="infoText">Use the file picker below to select multiple files.</p>
+
+    <input type="file" id="filesInput" multiple style="display:block; margin-top:8px;"/>
+    <input type="file" id="folderInput" webkitdirectory directory multiple style="display:none; margin-top:8px;"/>
+
+    <div id="thumbnails"></div>
+    <div class="nav-buttons">
+      <span></span>
+      <button id="step1NextBtn" onclick="nextStep(2)">Next</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Watermark Settings -->
+  <div id="step2" class="step">
+    <h2 id="step2Title">Step 2: Watermark Settings</h2>
+    <canvas id="canvas"></canvas>
+
+    <!-- Image Watermark Settings -->
+    <div class="watermark-block">
+      <h3 id="imgWatermarkTitle">Image Watermark</h3>
+      <label>
+        <input type="checkbox" id="enableImageWatermark" checked/>
+        <span id="enableImageLabel">Enable Image Watermark</span>
+      </label>
+      <div id="imageWatermarkControls" style="margin-top:10px;">
+        <p id="uploadWatermarkLabel" style="font-weight:500; margin-bottom:6px;">Upload Watermark (Image):</p>
+        <input type="file" id="logoUpload" accept="image/*" />
+        <div class="controls">
+            <label id="imgXLabel">X pos (%): <input type="range" id="imgXRange" min="0" max="100" step="1" value="97"/></label>
+            <label id="imgYLabel">Y pos (%): <input type="range" id="imgYRange" min="0" max="100" step="1" value="97"/></label>
+        </div>
+        <div class="controls">
+          <label id="imgScaleLabel">Scale (%): <input type="range" id="imgScaleRange" min="10" max="500" step="10" value="100"/></label>
+          <label id="imgOpacityLabel">Opacity: <input type="range" id="imgOpacityRange" min="0" max="1" step="0.05" value="1"/></label>
+          <label id="imgRotationLabel">Rotation (°): <input type="range" id="imgRotationRange" min="0" max="360" step="1" value="0"/></label>
+        </div>
+        <!-- Image border/fill -->
+        <div class="controls">
+          <label id="imgBorderColorLabel">Image Border Color: <input type="color" id="imageBorderColor" value="#ff0000"/></label>
+          <label id="imgBorderOpacityLabel">Border Opacity: <input type="range" id="imageBorderOpacity" min="0" max="1" step="0.05" value="1"/></label>
+          <label id="imgBorderThicknessLabel">Border Thickness: <input type="number" id="imageBorderThickness" min="0" max="20" value="0"/></label>
+        </div>
+        <div class="controls">
+          <label id="imgFillColorLabel">Fill Color: <input type="color" id="imageFillColor" value="#ffffff"/></label>
+          <label id="imgFillOpacityLabel">Fill Opacity: <input type="range" id="imageFillOpacity" min="0" max="1" step="0.05" value="0"/></label>
+          <label id="imgCornerLabel">Corner Radius: <input type="number" id="imageCornerRadius" min="0" max="100" value="0"/></label>
+          <label id="imgFillMarginLabel">Fill Margin (px): <input type="number" id="imageFillMargin" min="0" max="100" value="0"/></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Text Watermark Settings -->
+    <div class="watermark-block">
+      <h3 id="textWatermarkTitle">Text Watermark</h3>
+      <label>
+        <input type="checkbox" id="enableTextWatermark"/>
+        <span id="enableTextLabel">Enable Text Watermark</span>
+      </label>
+      <div id="textWatermarkControls" style="margin-top:10px; display:none;">
+        <label id="textLabel">Text: <input type="text" id="watermarkText" placeholder="Your watermark text..."/></label>
+        <br/>
+        <label id="fontSizeLabel">Font Size (px): <input type="number" id="textSize" value="30" min="8" max="100"/></label>
+        <label id="textColorLabel">Text Color: <input type="color" id="textColor" value="#000000"/></label>
+        <br/>
+        <label id="boldLabel"><input type="checkbox" id="boldCheck"/> Bold</label>
+        <label id="italicLabel"><input type="checkbox" id="italicCheck"/> Italic</label>
+        <label id="fontFamilyLabel">Font Family:
+          <select id="fontFamilySelect">
+            <option value="Arial">Arial</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Courier New">Courier New</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Verdana">Verdana</option>
+          </select>
+        </label>
+        <div class="controls">
+          <label id="textXLabel">X position (%): <input type="range" id="textXRange" min="0" max="100" step="1" value="50"/></label>
+          <label id="textYLabel">Y position (%): <input type="range" id="textYRange" min="0" max="100" step="1" value="50"/></label>
+        </div>
+        <div class="controls">
+          <label id="textScaleLabel">Scale (%): <input type="range" id="textScaleRange" min="10" max="500" step="10" value="100"/></label>
+          <label id="textOpacityLabel">Opacity: <input type="range" id="textOpacityRange" min="0" max="1" step="0.05" value="1"/></label>
+          <label id="textRotationLabel">Rotation (°): <input type="range" id="textRotationRange" min="0" max="360" step="1" value="0"/></label>
+        </div>
+        <!-- Text border/fill -->
+        <div class="controls">
+          <label id="textBorderColorLabel">Text Border Color: <input type="color" id="textBorderColor" value="#ff0000"/></label>
+          <label id="textBorderOpacityLabel">Border Opacity: <input type="range" id="textBorderOpacity" min="0" max="1" step="0.05" value="1"/></label>
+          <label id="textBorderThicknessLabel">Border Thickness: <input type="number" id="textBorderThickness" min="0" max="20" value="0"/></label>
+        </div>
+        <div class="controls">
+          <label id="textFillColorLabel">Fill Color: <input type="color" id="textFillColor" value="#ffffff"/></label>
+          <label id="textFillOpacityLabel">Fill Opacity: <input type="range" id="textFillOpacity" min="0" max="1" step="0.05" value="0"/></label>
+          <label id="textCornerLabel">Corner Radius: <input type="number" id="textCornerRadius" min="0" max="100" value="0"/></label>
+          <label id="textFillMarginLabel">Fill Margin (px): <input type="number" id="textFillMargin" min="0" max="100" value="0"/></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-buttons">
+      <button id="step2PrevBtn" onclick="prevStep(1)">Previous</button>
+      <button id="step2NextBtn" onclick="nextStep(3)">Next</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: Brightness/Contrast -->
+  <div id="step3" class="step">
+    <h2 id="step3Title">Step 3: Basic Image Adjustments</h2>
+    <p id="step3Description">Adjust brightness or contrast for all images before watermark:</p>
+    <div class="controls">
+      <label id="brightnessLabel">Brightness: <input type="range" id="brightnessRange" min="0" max="200" step="1" value="100"/></label>
+      <label id="contrastLabel">Contrast: <input type="range" id="contrastRange" min="0" max="200" step="1" value="100"/></label>
+      <button id="resetAdjustmentsBtn">Reset Adjustments</button>
+    </div>
+    <canvas id="adjustCanvas"></canvas>
+
+    <div class="nav-buttons">
+      <button id="step3PrevBtn" onclick="prevStep(2)">Previous</button>
+      <button id="step3NextBtn" onclick="nextStep(4)">Next</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: Export -->
+  <div id="step4" class="step">
+    <h2 id="step4Title">Step 4: Export Images</h2>
+    <label id="qualityLabel">Quality (%): <input type="number" id="quality" value="100" min="1" max="100" style="width:60px;"/></label>
+    <label id="resizeLabel">Resize (%): <input type="number" id="resize" value="100" min="1" max="100" style="width:60px;"/></label>
+
+    <div style="margin-top:10px;">
+      <p id="fileNameModeLabel"><strong>File Name Mode</strong></p>
+      <label id="sameNameLabel"><input type="radio" name="filenameMode" value="same" checked/> Keep Original Name</label><br/>
+      <label id="watermarkNameLabel"><input type="radio" name="filenameMode" value="watermark"/> Original + "Watermark"</label><br/>
+      <label id="customNameLabel"><input type="radio" name="filenameMode" value="custom"/> Custom Name + index</label>
+      <input type="text" id="customName" placeholder="image" style="width:80px;"/>
+    </div>
+
+    <div class="nav-buttons" style="margin-top:10px;">
+      <button id="step4PrevBtn" onclick="prevStep(3)">Previous</button>
+      <button id="download">Download All</button>
+    </div>
+
+    <div id="progressContainer" style="display:none; margin-top:20px; text-align:center;">
+      <div id="progressText" style="margin-bottom:5px; font-weight:600;"></div>
+      <progress id="progressBar" value="0" max="100" style="width:50%; height:18px;"></progress>
+    </div>
+  </div>
+
+  <script>
+   /* ====================
+       TRANSLATION STRINGS
+       ==================== */
+       const translations = {
+      en: {
+        titleMain: "Advanced Watermark Tool",
+        step1Title: "Step 1: Upload Images",
+        step1Description: "Select multiple files or an entire folder:",
+        step1NextBtn: "Next",
+
+        step2Title: "Step 2: Watermark Settings",
+        imgWatermarkTitle: "Image Watermark",
+        enableImageLabel: "Enable Image Watermark",
+        uploadWatermarkLabel: "Upload Watermark (Image):",
+        imgXLabel: "X pos (%):",
+        imgYLabel: "Y pos (%):",
+        imgScaleLabel: "Scale (%):",
+        imgOpacityLabel: "Opacity:",
+        imgRotationLabel: "Rotation (°):",
+        imgBorderColorLabel: "Image Border Color:",
+        imgBorderOpacityLabel: "Border Opacity:",
+        imgBorderThicknessLabel: "Border Thickness:",
+        imgFillColorLabel: "Fill Color:",
+        imgFillOpacityLabel: "Fill Opacity:",
+        imgCornerLabel: "Corner Radius:",
+        imgFillMarginLabel: "Fill Margin (px):",
+
+        textWatermarkTitle: "Text Watermark",
+        enableTextLabel: "Enable Text Watermark",
+        textLabel: "Text:",
+        fontSizeLabel: "Font Size (px):",
+        textColorLabel: "Text Color:",
+        boldLabel: "Bold",
+        italicLabel: "Italic",
+        fontFamilyLabel: "Font Family:",
+        textXLabel: "X position (%):",
+        textYLabel: "Y position (%):",
+        textScaleLabel: "Scale (%):",
+        textOpacityLabel: "Opacity:",
+        textRotationLabel: "Rotation (°):",
+        textBorderColorLabel: "Text Border Color:",
+        textBorderOpacityLabel: "Border Opacity:",
+        textBorderThicknessLabel: "Border Thickness:",
+        textFillColorLabel: "Fill Color:",
+        textFillOpacityLabel: "Fill Opacity:",
+        textCornerLabel: "Corner Radius:",
+        textFillMarginLabel: "Fill Margin (px):",
+        step2PrevBtn: "Previous",
+        step2NextBtn: "Next",
+
+        step3Title: "Step 3: Basic Image Adjustments",
+        step3Description: "Adjust brightness or contrast for all images before watermark:",
+        brightnessLabel: "Brightness:",
+        contrastLabel: "Contrast:",
+        resetAdjustmentsBtn: "Reset Adjustments",
+        step3PrevBtn: "Previous",
+        step3NextBtn: "Next",
+
+        step4Title: "Step 4: Export Images",
+        qualityLabel: "Quality (%):",
+        resizeLabel: "Resize (%):",
+        fileNameModeLabel: "File Name Mode",
+        sameNameLabel: "Keep Original Name",
+        watermarkNameLabel: "Original + \"Watermark\"",
+        customNameLabel: "Custom Name + index",
+        step4PrevBtn: "Previous",
+        downloadAllBtn: "Download All",
+
+        infoText: "Use the file picker below to select multiple files.",
+        step1Description2: "",
+
+        noImagesMsg: "No images uploaded!"
+      },
+      gr: {
+        titleMain: "Εργαλείο Προσθήκης Υδατογραφήματος",
+        step1Title: "Βήμα 1: Ανέβασμα Εικόνων",
+        step1Description: "Επιλέξτε πολλαπλά αρχεία ή έναν ολόκληρο φάκελο:",
+        step1NextBtn: "Επόμενο",
+
+        step2Title: "Βήμα 2: Ρυθμίσεις Υδατογραφήματος",
+        imgWatermarkTitle: "Υδατογράφημα Εικόνας",
+        enableImageLabel: "Ενεργοποίηση Υδατογραφήματος Εικόνας",
+        uploadWatermarkLabel: "Ανεβάστε το λογότυπο (Εικόνα):",
+        imgXLabel: "Θέση X (%):",
+        imgYLabel: "Θέση Y (%):",
+        imgScaleLabel: "Κλίμακα (%):",
+        imgOpacityLabel: "Διαφάνεια:",
+        imgRotationLabel: "Περιστροφή (°):",
+        imgBorderColorLabel: "Χρώμα Περιγράμματος:",
+        imgBorderOpacityLabel: "Διαφάνεια Περιγράμματος:",
+        imgBorderThicknessLabel: "Πάχος Περιγράμματος:",
+        imgFillColorLabel: "Χρώμα Φόντου:",
+        imgFillOpacityLabel: "Διαφάνεια Φόντου:",
+        imgCornerLabel: "Στρογγυλεμένες Γωνίες:",
+        imgFillMarginLabel: "Περιθώριο Γεμίσματος (px):",
+
+        textWatermarkTitle: "Υδατογράφημα Κειμένου",
+        enableTextLabel: "Ενεργοποίηση Υδατογραφήματος Κειμένου",
+        textLabel: "Κείμενο:",
+        fontSizeLabel: "Μέγεθος Γραμματοσειράς (px):",
+        textColorLabel: "Χρώμα Κειμένου:",
+        boldLabel: "Έντονα",
+        italicLabel: "Πλάγια",
+        fontFamilyLabel: "Οικογένεια Γραμματοσειράς:",
+        textXLabel: "Θέση X (%):",
+        textYLabel: "Θέση Y (%):",
+        textScaleLabel: "Κλίμακα (%):",
+        textOpacityLabel: "Διαφάνεια:",
+        textRotationLabel: "Περιστροφή (°):",
+        textBorderColorLabel: "Χρώμα Περιγράμματος Κειμένου:",
+        textBorderOpacityLabel: "Διαφάνεια Περιγράμματος:",
+        textBorderThicknessLabel: "Πάχος Περιγράμματος:",
+        textFillColorLabel: "Χρώμα Φόντου:",
+        textFillOpacityLabel: "Διαφάνεια Φόντου:",
+        textCornerLabel: "Στρογγυλεμένες Γωνίες:",
+        textFillMarginLabel: "Περιθώριο Γεμίσματος (px):",
+        step2PrevBtn: "Προηγούμενο",
+        step2NextBtn: "Επόμενο",
+
+        step3Title: "Βήμα 3: Βασικές Ρυθμίσεις Εικόνας",
+        step3Description: "Ρυθμίστε τη φωτεινότητα ή την αντίθεση για όλες τις εικόνες πριν το υδατογράφημα:",
+        brightnessLabel: "Φωτεινότητα:",
+        contrastLabel: "Αντίθεση:",
+        resetAdjustmentsBtn: "Επαναφορά",
+        step3PrevBtn: "Προηγούμενο",
+        step3NextBtn: "Επόμενο",
+
+        step4Title: "Βήμα 4: Εξαγωγή Εικόνων",
+        qualityLabel: "Ποιότητα (%):",
+        resizeLabel: "Αλλαγή Μεγέθους (%):",
+        fileNameModeLabel: "Τρόπος Ονομασίας Αρχείων",
+        sameNameLabel: "Διατήρηση Αρχικού Ονόματος",
+        watermarkNameLabel: "Αρχικό + \"Watermark\"",
+        customNameLabel: "Προσαρμοσμένο Όνομα + αύξων αριθμός",
+        step4PrevBtn: "Προηγούμενο",
+        downloadAllBtn: "Λήψη Όλων",
+
+        infoText: "Χρησιμοποιήστε τον picker για να επιλέξετε πολλά αρχεία.",
+        step1Description2: "",
+
+        noImagesMsg: "Δεν ανέβηκαν εικόνες!"
+      }
+    };
+
+    /* ==============
+       MAIN JS LOGIC
+       ============== */
+
+    let images=[];
+    let previewImg=null;
+
+    // Image Watermark
+    let enableImageWatermark=true;
+    let imgXPercent=97;
+    let imgYPercent=97;
+    let imgScale=100;
+    let imgOpacity=1;
+    let imgRotation=0;
+    let logo=new Image();
+
+    // Image-specific border/fill
+    let imageBorderColor="#ff0000";
+    let imageBorderOpacity=1;
+    let imageBorderThickness=0;
+    let imageFillColor="#ffffff";
+    let imageFillOpacity=0;
+    let imageCornerRadius=0;
+    let imageFillMargin=0;
+
+    // Text Watermark
+    let enableTextWatermark=false;
+    let textWatermark="";
+    let textSize=30;
+    let textColor="#000000";
+    let textBold=false;
+    let textItalic=false;
+    let fontFamily="Arial";
+    let textXPercent=50;
+    let textYPercent=50;
+    let textScale=100;
+    let textOpacity=1;
+    let textRotation=0;
+
+    // Text-specific border/fill
+    let textBorderColor="#ff0000";
+    let textBorderOpacity=1;
+    let textBorderThickness=0;
+    let textFillColor="#ffffff";
+    let textFillOpacity=0;
+    let textCornerRadius=0;
+    let textFillMargin=0;
+
+    // Brightness/Contrast
+    let brightness=100;
+    let contrast=100;
+
+    // Debounce
+    let drawTimer=null;
+
+    // Canvas references
+    const canvas=document.getElementById("canvas");
+    const ctx=canvas.getContext("2d");
+    const adjustCanvas=document.getElementById("adjustCanvas");
+    const adjustCtx=adjustCanvas.getContext("2d");
+
+    // Steps
+    function nextStep(step){
+      document.querySelectorAll(".step").forEach(s=>s.classList.remove("active"));
+      document.getElementById("step"+step).classList.add("active");
+      if(step===3||step===4){
+        drawPreview();
+        drawAdjustmentPreview();
+      }
+    }
+    function prevStep(step){
+      document.querySelectorAll(".step").forEach(s=>s.classList.remove("active"));
+      document.getElementById("step"+step).classList.add("active");
+      if(step===2){
+        drawPreview();
+      } else if(step===3){
+        drawPreview();
+        drawAdjustmentPreview();
+      }
+    }
+
+    // i18n: translation function
+    const languageSelect=document.getElementById("languageSelect");
+    languageSelect.addEventListener("change", ()=>{
+      applyTranslation(languageSelect.value);
+    });
+
+    function applyTranslation(lang){
+      const t = translations[lang] || translations.en;
+
+      document.getElementById("titleMain").textContent=t.titleMain;
+
+      // Step 1
+      document.getElementById("step1Title").textContent=t.step1Title;
+      document.getElementById("step1Description").textContent=t.step1Description;
+      document.getElementById("step1NextBtn").textContent=t.step1NextBtn;
+      document.getElementById("infoText").textContent = t.infoText;
+
+      // Step 2
+      document.getElementById("step2Title").textContent=t.step2Title;
+      document.getElementById("imgWatermarkTitle").textContent=t.imgWatermarkTitle;
+      document.getElementById("enableImageLabel").textContent=t.enableImageLabel;
+      document.getElementById("uploadWatermarkLabel").textContent=t.uploadWatermarkLabel;
+      document.getElementById("imgXLabel").childNodes[0].textContent=t.imgXLabel+" ";
+      document.getElementById("imgYLabel").childNodes[0].textContent=t.imgYLabel+" ";
+      document.getElementById("imgScaleLabel").childNodes[0].textContent=t.imgScaleLabel+" ";
+      document.getElementById("imgOpacityLabel").childNodes[0].textContent=t.imgOpacityLabel+" ";
+      document.getElementById("imgRotationLabel").childNodes[0].textContent=t.imgRotationLabel+" ";
+      document.getElementById("imgBorderColorLabel").childNodes[0].textContent=t.imgBorderColorLabel+" ";
+      document.getElementById("imgBorderOpacityLabel").childNodes[0].textContent=t.imgBorderOpacityLabel+" ";
+      document.getElementById("imgBorderThicknessLabel").childNodes[0].textContent=t.imgBorderThicknessLabel+" ";
+      document.getElementById("imgFillColorLabel").childNodes[0].textContent=t.imgFillColorLabel+" ";
+      document.getElementById("imgFillOpacityLabel").childNodes[0].textContent=t.imgFillOpacityLabel+" ";
+      document.getElementById("imgCornerLabel").childNodes[0].textContent=t.imgCornerLabel+" ";
+      document.getElementById("imgFillMarginLabel").childNodes[0].textContent=t.imgFillMarginLabel+" ";
+
+      document.getElementById("textWatermarkTitle").textContent=t.textWatermarkTitle;
+      document.getElementById("enableTextLabel").textContent=t.enableTextLabel;
+      document.getElementById("textLabel").childNodes[0].textContent=t.textLabel+" ";
+      document.getElementById("fontSizeLabel").childNodes[0].textContent=t.fontSizeLabel+" ";
+      document.getElementById("textColorLabel").childNodes[0].textContent=t.textColorLabel+" ";
+      document.getElementById("boldLabel").childNodes[1].textContent=t.boldLabel;
+      document.getElementById("italicLabel").childNodes[1].textContent=t.italicLabel;
+      document.getElementById("fontFamilyLabel").childNodes[0].textContent=t.fontFamilyLabel+" ";
+      document.getElementById("textXLabel").childNodes[0].textContent=t.textXLabel+" ";
+      document.getElementById("textYLabel").childNodes[0].textContent=t.textYLabel+" ";
+      document.getElementById("textScaleLabel").childNodes[0].textContent=t.textScaleLabel+" ";
+      document.getElementById("textOpacityLabel").childNodes[0].textContent=t.textOpacityLabel+" ";
+      document.getElementById("textRotationLabel").childNodes[0].textContent=t.textRotationLabel+" ";
+      document.getElementById("textBorderColorLabel").childNodes[0].textContent=t.textBorderColorLabel+" ";
+      document.getElementById("textBorderOpacityLabel").childNodes[0].textContent=t.textBorderOpacityLabel+" ";
+      document.getElementById("textBorderThicknessLabel").childNodes[0].textContent=t.textBorderThicknessLabel+" ";
+      document.getElementById("textFillColorLabel").childNodes[0].textContent=t.textFillColorLabel+" ";
+      document.getElementById("textFillOpacityLabel").childNodes[0].textContent=t.textFillOpacityLabel+" ";
+      document.getElementById("textCornerLabel").childNodes[0].textContent=t.textCornerLabel+" ";
+      document.getElementById("textFillMarginLabel").childNodes[0].textContent=t.textFillMarginLabel+" ";
+      document.getElementById("step2PrevBtn").textContent=t.step2PrevBtn;
+      document.getElementById("step2NextBtn").textContent=t.step2NextBtn;
+
+      // Step 3
+      document.getElementById("step3Title").textContent = t.step3Title;
+      document.getElementById("step3Description").textContent = t.step3Description;
+      document.getElementById("brightnessLabel").childNodes[0].textContent = t.brightnessLabel+" ";
+      document.getElementById("contrastLabel").childNodes[0].textContent = t.contrastLabel+" ";
+      document.getElementById("resetAdjustmentsBtn").textContent = t.resetAdjustmentsBtn;
+      document.getElementById("step3PrevBtn").textContent = t.step3PrevBtn;
+      document.getElementById("step3NextBtn").textContent = t.step3NextBtn;
+
+      // Step 4
+      document.getElementById("step4Title").textContent = t.step4Title;
+      document.getElementById("qualityLabel").childNodes[0].textContent = t.qualityLabel+" ";
+      document.getElementById("resizeLabel").childNodes[0].textContent = t.resizeLabel+" ";
+      document.getElementById("fileNameModeLabel").textContent = t.fileNameModeLabel;
+      document.getElementById("sameNameLabel").childNodes[1].textContent = t.sameNameLabel;
+      document.getElementById("watermarkNameLabel").childNodes[1].textContent = t.watermarkNameLabel;
+      document.getElementById("customNameLabel").childNodes[1].textContent = t.customNameLabel;
+      document.getElementById("step4PrevBtn").textContent = t.step4PrevBtn;
+      document.getElementById("download").textContent = t.downloadAllBtn;
+    }
+
+    /* Window onLoad logic */
+    window.addEventListener('load', ()=>{
+      updateUploadMode();
+      applyTranslation('en'); // default to English
+    });
+
+    /* STEP 1 */
+    const uploadModeSelect=document.getElementById("uploadMode");
+    const filesInput=document.getElementById("filesInput");
+    const folderInput=document.getElementById("folderInput");
+    const thumbnailsDiv=document.getElementById("thumbnails");
+    const infoText=document.getElementById("infoText");
+
+    uploadModeSelect.addEventListener("change", updateUploadMode);
+    function updateUploadMode(){
+      const mode=uploadModeSelect.value;
+      if(mode==="files"){
+        filesInput.style.display="block";
+        folderInput.style.display="none";
+        infoText.textContent="Use the file picker below to select multiple files.";
+      } else {
+        filesInput.style.display="none";
+        folderInput.style.display="block";
+        infoText.textContent="Use the folder picker to select an entire folder.";
+      }
+    }
+
+    filesInput.addEventListener('change',(e)=>{
+      const fileList=[...e.target.files];
+      handleImageUpload(fileList);
+    });
+    folderInput.addEventListener('change',(e)=>{
+      const fileList=[...e.target.files];
+      handleImageUpload(fileList);
+    });
+
+    function handleImageUpload(fileList){
+      images=images.concat(fileList);
+      renderThumbnails();
+      if(!previewImg && images.length>0){
+        fileToImage(images[0]).then(img=>{
+          previewImg=img;
+          drawPreview();
+          drawAdjustmentPreview();
+        });
+      } else {
+        drawPreview();
+        drawAdjustmentPreview();
+      }
+    }
+
+    function renderThumbnails(){
+      thumbnailsDiv.innerHTML="";
+      if(images.length===0) return;
+      if(images.length<=3){
+        for(let i=0;i<images.length;i++){
+          const turl=URL.createObjectURL(images[i]);
+          const el=document.createElement("img");
+          el.className="thumbnail";
+          el.src=turl;
+          thumbnailsDiv.appendChild(el);
+        }
+      } else {
+        for(let i=0; i<3; i++){
+          const turl=URL.createObjectURL(images[i]);
+          const el=document.createElement("img");
+          el.className="thumbnail";
+          el.src=turl;
+          thumbnailsDiv.appendChild(el);
+        }
+        const dots=document.createElement("span");
+        dots.textContent=` ... (${images.length} total) ... `;
+        dots.style.fontWeight="bold";
+        thumbnailsDiv.appendChild(dots);
+        const lastUrl=URL.createObjectURL(images[images.length-1]);
+        const lastThumb=document.createElement("img");
+        lastThumb.className="thumbnail";
+        lastThumb.src=lastUrl;
+        thumbnailsDiv.appendChild(lastThumb);
+      }
+    }
+
+    function fileToImage(file){
+      return new Promise((resolve,reject)=>{
+        const reader=new FileReader();
+        reader.onload=(e)=>{
+          const img=new Image();
+          img.onload=()=>resolve(img);
+          img.onerror=reject;
+          img.src=e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    /* STEP 2: Watermark Vars & UI */
+    const enableImageWatermarkCheck=document.getElementById("enableImageWatermark");
+    const imageWatermarkControls=document.getElementById("imageWatermarkControls");
+    const imgXRange=document.getElementById("imgXRange");
+    const imgYRange=document.getElementById("imgYRange");
+    const imgScaleRange=document.getElementById("imgScaleRange");
+    const imgOpacityRange=document.getElementById("imgOpacityRange");
+    const imgRotationRange=document.getElementById("imgRotationRange");
+    const logoUpload=document.getElementById("logoUpload");
+
+    // Image border/fill
+    const imageBorderColorInput=document.getElementById("imageBorderColor");
+    const imageBorderOpacityRange=document.getElementById("imageBorderOpacity");
+    const imageBorderThicknessInput=document.getElementById("imageBorderThickness");
+    const imageFillColorInput=document.getElementById("imageFillColor");
+    const imageFillOpacityRange=document.getElementById("imageFillOpacity");
+    const imageCornerRadiusInput=document.getElementById("imageCornerRadius");
+    const imageFillMarginInput=document.getElementById("imageFillMargin");
+
+    enableImageWatermarkCheck.addEventListener("change",()=>{
+      enableImageWatermark=enableImageWatermarkCheck.checked;
+      imageWatermarkControls.style.display=enableImageWatermark?"block":"none";
+      debounceDrawPreview();
+    });
+    logoUpload.addEventListener("change",(e)=>{
+      const file=e.target.files[0];
+      if(file){
+        const rd=new FileReader();
+        rd.onload=(ev)=>{
+          logo.src=ev.target.result;
+          logo.onload=()=>{
+            debounceDrawPreview();
+          };
+        };
+        rd.readAsDataURL(file);
+      }
+    });
+    imgXRange.addEventListener("input",()=>{
+      imgXPercent=parseFloat(imgXRange.value);
+      debounceDrawPreview();
+    });
+    imgYRange.addEventListener("input",()=>{
+      imgYPercent=parseFloat(imgYRange.value);
+      debounceDrawPreview();
+    });
+    imgScaleRange.addEventListener("input",()=>{
+      imgScale=parseFloat(imgScaleRange.value);
+      debounceDrawPreview();
+    });
+    imgOpacityRange.addEventListener("input",()=>{
+      imgOpacity=parseFloat(imgOpacityRange.value);
+      debounceDrawPreview();
+    });
+    imgRotationRange.addEventListener("input",()=>{
+      imgRotation=parseFloat(imgRotationRange.value);
+      debounceDrawPreview();
+    });
+
+    imageBorderColorInput.addEventListener("input",()=>{
+      imageBorderColor=imageBorderColorInput.value;
+      debounceDrawPreview();
+    });
+    imageBorderOpacityRange.addEventListener("input",()=>{
+      imageBorderOpacity=parseFloat(imageBorderOpacityRange.value);
+      debounceDrawPreview();
+    });
+    imageBorderThicknessInput.addEventListener("input",()=>{
+      imageBorderThickness=parseInt(imageBorderThicknessInput.value);
+      debounceDrawPreview();
+    });
+    imageFillColorInput.addEventListener("input",()=>{
+      imageFillColor=imageFillColorInput.value;
+      debounceDrawPreview();
+    });
+    imageFillOpacityRange.addEventListener("input",()=>{
+      imageFillOpacity=parseFloat(imageFillOpacityRange.value);
+      debounceDrawPreview();
+    });
+    imageCornerRadiusInput.addEventListener("input",()=>{
+      imageCornerRadius=parseInt(imageCornerRadiusInput.value);
+      debounceDrawPreview();
+    });
+    imageFillMarginInput.addEventListener("input",()=>{
+      imageFillMargin=parseInt(imageFillMarginInput.value);
+      debounceDrawPreview();
+    });
+
+    // Text watermark
+    const enableTextWatermarkCheck=document.getElementById("enableTextWatermark");
+    const textWatermarkControls=document.getElementById("textWatermarkControls");
+    const watermarkTextInput=document.getElementById("watermarkText");
+    const textSizeInput=document.getElementById("textSize");
+    const textColorInput=document.getElementById("textColor");
+    const boldCheck=document.getElementById("boldCheck");
+    const italicCheck=document.getElementById("italicCheck");
+    const fontFamilySelect=document.getElementById("fontFamilySelect");
+    const textXRange=document.getElementById("textXRange");
+    const textYRange=document.getElementById("textYRange");
+    const textScaleRange=document.getElementById("textScaleRange");
+    const textOpacityRange=document.getElementById("textOpacityRange");
+    const textRotationRange=document.getElementById("textRotationRange");
+
+    // Text border/fill
+    const textBorderColorInput=document.getElementById("textBorderColor");
+    const textBorderOpacityRange=document.getElementById("textBorderOpacity");
+    const textBorderThicknessInput=document.getElementById("textBorderThickness");
+    const textFillColorInput=document.getElementById("textFillColor");
+    const textFillOpacityRange=document.getElementById("textFillOpacity");
+    const textCornerRadiusInput=document.getElementById("textCornerRadius");
+    const textFillMarginInput=document.getElementById("textFillMargin");
+
+    enableTextWatermarkCheck.addEventListener("change",()=>{
+      enableTextWatermark=enableTextWatermarkCheck.checked;
+      textWatermarkControls.style.display=enableTextWatermark?"block":"none";
+      debounceDrawPreview();
+    });
+    watermarkTextInput.addEventListener("input",()=>{
+      textWatermark=watermarkTextInput.value;
+      debounceDrawPreview();
+    });
+    textSizeInput.addEventListener("input",()=>{
+      textSize=parseInt(textSizeInput.value);
+      debounceDrawPreview();
+    });
+    textColorInput.addEventListener("input",()=>{
+      textColor=textColorInput.value;
+      debounceDrawPreview();
+    });
+    boldCheck.addEventListener("change",()=>{
+      textBold=boldCheck.checked;
+      debounceDrawPreview();
+    });
+    italicCheck.addEventListener("change",()=>{
+      textItalic=italicCheck.checked;
+      debounceDrawPreview();
+    });
+    fontFamilySelect.addEventListener("change",()=>{
+      fontFamily=fontFamilySelect.value;
+      debounceDrawPreview();
+    });
+    textXRange.addEventListener("input",()=>{
+      textXPercent=parseFloat(textXRange.value);
+      debounceDrawPreview();
+    });
+    textYRange.addEventListener("input",()=>{
+      textYPercent=parseFloat(textYRange.value);
+      debounceDrawPreview();
+    });
+    textScaleRange.addEventListener("input",()=>{
+      textScale=parseFloat(textScaleRange.value);
+      debounceDrawPreview();
+    });
+    textOpacityRange.addEventListener("input",()=>{
+      textOpacity=parseFloat(textOpacityRange.value);
+      debounceDrawPreview();
+    });
+    textRotationRange.addEventListener("input",()=>{
+      textRotation=parseFloat(textRotationRange.value);
+      debounceDrawPreview();
+    });
+    textBorderColorInput.addEventListener("input",()=>{
+      textBorderColor=textBorderColorInput.value;
+      debounceDrawPreview();
+    });
+    textBorderOpacityRange.addEventListener("input",()=>{
+      textBorderOpacity=parseFloat(textBorderOpacityRange.value);
+      debounceDrawPreview();
+    });
+    textBorderThicknessInput.addEventListener("input",()=>{
+      textBorderThickness=parseInt(textBorderThicknessInput.value);
+      debounceDrawPreview();
+    });
+    textFillColorInput.addEventListener("input",()=>{
+      textFillColor=textFillColorInput.value;
+      debounceDrawPreview();
+    });
+    textFillOpacityRange.addEventListener("input",()=>{
+      textFillOpacity=parseFloat(textFillOpacityRange.value);
+      debounceDrawPreview();
+    });
+    textCornerRadiusInput.addEventListener("input",()=>{
+      textCornerRadius=parseInt(textCornerRadiusInput.value);
+      debounceDrawPreview();
+    });
+    textFillMarginInput.addEventListener("input",()=>{
+      textFillMargin=parseInt(textFillMarginInput.value);
+      debounceDrawPreview();
+    });
+
+    function debounceDrawPreview(delay=300){
+      if(drawTimer) clearTimeout(drawTimer);
+      drawTimer=setTimeout(()=>{
+        drawPreview();
+        drawAdjustmentPreview();
+      }, delay);
+    }
+
+    function drawPreview(){
+      canvas.width=600;
+      canvas.height=400;
+      ctx.clearRect(0,0,600,400);
+      if(previewImg && previewImg.complete){
+        const filterStr=`brightness(${brightness}%) contrast(${contrast}%)`;
+        ctx.save();
+        ctx.filter=filterStr;
+        ctx.drawImage(previewImg,0,0,600,400);
+        ctx.restore();
+      }
+      drawWatermark(600,400,previewImg,ctx);
+    }
+
+    function drawAdjustmentPreview(){
+      adjustCanvas.width=600;
+      adjustCanvas.height=400;
+      adjustCtx.clearRect(0,0,600,400);
+      if(previewImg && previewImg.complete){
+        const filterStr=`brightness(${brightness}%) contrast(${contrast}%)`;
+        adjustCtx.save();
+        adjustCtx.filter=filterStr;
+        adjustCtx.drawImage(previewImg,0,0,600,400);
+        adjustCtx.restore();
+      }
+    }
+
+    function drawRoundedRect(ctx,x,y,w,h,r){
+      ctx.beginPath();
+      ctx.moveTo(x+r,y);
+      ctx.lineTo(x+w-r,y);
+      ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+      ctx.lineTo(x+w,y+h-r);
+      ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+      ctx.lineTo(x+r,y+h);
+      ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+      ctx.lineTo(x,y+r);
+      ctx.quadraticCurveTo(x,y,x+r,y);
+      ctx.closePath();
+    }
+
+    function drawWatermark(baseW,baseH, baseImage, context){
+      context.save();
+      // forced scale
+      let origW=baseImage?.width||baseW;
+      let origH=baseImage?.height||baseH;
+      let forcedScaleX=baseW/origW;
+      let forcedScaleY=baseH/origH;
+      let forcedScale=(forcedScaleX+forcedScaleY)/2;
+
+      // IMAGE WATERMARK
+      if(enableImageWatermark && logo.width && logo.height){
+        let rawW=logo.width*forcedScale*(imgScale/100);
+        let rawH=logo.height*forcedScale*(imgScale/100);
+        let xPos=(imgXPercent/100)*(baseW-rawW);
+        let yPos=(imgYPercent/100)*(baseH-rawH);
+        const margin=imageFillMargin;
+        const rad=imgRotation*Math.PI/180;
+
+        // transform
+        context.save();
+        context.globalAlpha=imgOpacity;
+        const cx=xPos+rawW*0.5;
+        const cy=yPos+rawH*0.5;
+        context.translate(cx,cy);
+        context.rotate(rad);
+        context.translate(-cx,-cy);
+
+        // fill
+        if(imageFillOpacity>0){
+          context.save();
+          context.globalAlpha=imageFillOpacity;
+          context.fillStyle=imageFillColor;
+          drawRoundedRect(context, xPos-margin,yPos-margin,rawW+2*margin,rawH+2*margin,imageCornerRadius);
+          context.fill();
+          context.restore();
+        }
+
+        // image
+        context.drawImage(logo,xPos,yPos,rawW,rawH);
+
+        // border
+        if(imageBorderThickness>0){
+          context.save();
+          context.globalAlpha=imageBorderOpacity;
+          context.strokeStyle=imageBorderColor;
+          context.lineWidth=imageBorderThickness;
+          drawRoundedRect(context, xPos-margin,yPos-margin,rawW+2*margin,rawH+2*margin,imageCornerRadius);
+          context.stroke();
+          context.restore();
+        }
+        context.restore();
+      }
+
+      // TEXT WATERMARK
+      if(enableTextWatermark && textWatermark){
+        let fontPx=textSize*forcedScale*(textScale/100);
+        let fontWeight=textBold?"bold":"normal";
+        let fontStyle=textItalic?"italic":"normal";
+        let styleStr=`${fontStyle} ${fontWeight} ${fontPx}px ${fontFamily}`;
+
+        context.save();
+        context.font=styleStr;
+        let measure=context.measureText(textWatermark);
+        let tWidth=measure.width;
+        let tHeight=fontPx;
+
+        let xPos=(textXPercent/100)*(baseW-tWidth);
+        let yPos=(textYPercent/100)*(baseH-tHeight);
+        let margin=textFillMargin;
+        let rad=textRotation*Math.PI/180;
+
+        // transform
+        context.globalAlpha=textOpacity;
+        const cx=xPos+tWidth*0.5;
+        const cy=yPos+tHeight*0.5;
+        context.translate(cx,cy);
+        context.rotate(rad);
+        context.translate(-cx,-cy);
+
+        // fill
+        if(textFillOpacity>0){
+          context.save();
+          context.globalAlpha=textFillOpacity;
+          context.fillStyle=textFillColor;
+          drawRoundedRect(context, xPos-margin,yPos-margin,tWidth+2*margin,tHeight+2*margin,textCornerRadius);
+          context.fill();
+          context.restore();
+        }
+
+        // text
+        context.fillStyle=textColor;
+        context.fillText(textWatermark,xPos,yPos+tHeight);
+
+        // border
+        if(textBorderThickness>0){
+          context.save();
+          context.globalAlpha=textBorderOpacity;
+          context.strokeStyle=textBorderColor;
+          context.lineWidth=textBorderThickness;
+          drawRoundedRect(context, xPos-margin,yPos-margin,tWidth+2*margin,tHeight+2*margin,textCornerRadius);
+          context.stroke();
+          context.restore();
+        }
+        context.restore();
+      }
+
+      context.restore();
+    }
+
+    /* STEP 3: Brightness/Contrast */
+    const brightnessRange=document.getElementById("brightnessRange");
+    const contrastRange=document.getElementById("contrastRange");
+    const resetAdjustmentsBtn=document.getElementById("resetAdjustmentsBtn");
+
+    brightnessRange.addEventListener("input",()=>{
+      brightness=parseInt(brightnessRange.value,10);
+      drawPreview();
+      drawAdjustmentPreview();
+    });
+    contrastRange.addEventListener("input",()=>{
+      contrast=parseInt(contrastRange.value,10);
+      drawPreview();
+      drawAdjustmentPreview();
+    });
+    resetAdjustmentsBtn.addEventListener("click",()=>{
+      brightness=100;
+      contrast=100;
+      brightnessRange.value="100";
+      contrastRange.value="100";
+      drawPreview();
+      drawAdjustmentPreview();
+    });
+
+    /* STEP 4: Export */
+    const downloadBtn=document.getElementById("download");
+    downloadBtn.addEventListener("click", processImages);
+
+    async function processImages(){
+      if(images.length===0){
+        alert("No images uploaded!");
+        return;
+      }
+      const quality=parseInt(document.getElementById("quality").value,10)/100;
+      const resizeFactor=parseInt(document.getElementById("resize").value,10)/100;
+
+      const filenameMode=document.querySelector('input[name="filenameMode"]:checked').value;
+      const customName=(document.getElementById("customName").value||"image").trim();
+
+      const progressContainer=document.getElementById("progressContainer");
+      const progressBar=document.getElementById("progressBar");
+      const progressText=document.getElementById("progressText");
+      progressContainer.style.display="block";
+      progressBar.value=0;
+      progressBar.max=images.length;
+      progressText.textContent=`Processing 0 of ${images.length} images...`;
+
+      const zip=new JSZip();
+
+      for(let i=0;i<images.length;i++){
+        try{
+          const file=images[i];
+          const img=await fileToImage(file);
+
+          const tempCanvas=document.createElement("canvas");
+          const tempCtx=tempCanvas.getContext("2d");
+
+          const finalW=img.width*resizeFactor;
+          const finalH=img.height*resizeFactor;
+          tempCanvas.width=finalW;
+          tempCanvas.height=finalH;
+
+          // apply brightness/contrast
+          const filterStr=`brightness(${brightness}%) contrast(${contrast}%)`;
+          tempCtx.save();
+          tempCtx.filter=filterStr;
+          tempCtx.drawImage(img,0,0,finalW,finalH);
+          tempCtx.restore();
+
+          let forcedScaleX=finalW/img.width;
+          let forcedScaleY=finalH/img.height;
+          let forcedScale=(forcedScaleX+forcedScaleY)/2;
+
+          // draw image watermark if enabled
+          if(enableImageWatermark && logo.width && logo.height){
+            let rawW=logo.width*forcedScale*(imgScale/100);
+            let rawH=logo.height*forcedScale*(imgScale/100);
+            let xPos=(imgXPercent/100)*(finalW-rawW);
+            let yPos=(imgYPercent/100)*(finalH-rawH);
+            const margin=imageFillMargin;
+            const rad=imgRotation*Math.PI/180;
+
+            tempCtx.save();
+            tempCtx.globalAlpha=imgOpacity;
+            const cx=xPos+rawW*0.5;
+            const cy=yPos+rawH*0.5;
+            tempCtx.translate(cx,cy);
+            tempCtx.rotate(rad);
+            tempCtx.translate(-cx,-cy);
+
+            function drawRoundedRect(ctx,x,y,w,h,r){
+              ctx.beginPath();
+              ctx.moveTo(x+r,y);
+              ctx.lineTo(x+w-r,y);
+              ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+              ctx.lineTo(x+w,y+h-r);
+              ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+              ctx.lineTo(x+r,y+h);
+              ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+              ctx.lineTo(x,y+r);
+              ctx.quadraticCurveTo(x,y,x+r,y);
+              ctx.closePath();
+            }
+
+            if(imageFillOpacity>0){
+              tempCtx.save();
+              tempCtx.globalAlpha=imageFillOpacity;
+              tempCtx.fillStyle=imageFillColor;
+              drawRoundedRect(tempCtx,xPos-margin,yPos-margin,rawW+2*margin,rawH+2*margin,imageCornerRadius);
+              tempCtx.fill();
+              tempCtx.restore();
+            }
+            tempCtx.drawImage(logo,xPos,yPos,rawW,rawH);
+
+            if(imageBorderThickness>0){
+              tempCtx.save();
+              tempCtx.globalAlpha=imageBorderOpacity;
+              tempCtx.strokeStyle=imageBorderColor;
+              tempCtx.lineWidth=imageBorderThickness;
+              drawRoundedRect(tempCtx,xPos-margin,yPos-margin,rawW+2*margin,rawH+2*margin,imageCornerRadius);
+              tempCtx.stroke();
+              tempCtx.restore();
+            }
+
+            tempCtx.restore();
+          }
+
+          // draw text watermark if enabled
+          if(enableTextWatermark && textWatermark){
+            let fontPx=textSize*forcedScale*(textScale/100);
+            let fontWeight=textBold?"bold":"normal";
+            let fontStyle=textItalic?"italic":"normal";
+            let styleStr=`${fontStyle} ${fontWeight} ${fontPx}px ${fontFamily}`;
+            tempCtx.save();
+            tempCtx.font=styleStr;
+            tempCtx.globalAlpha=textOpacity;
+
+            let measure=tempCtx.measureText(textWatermark);
+            let tWidth=measure.width;
+            let tHeight=fontPx;
+
+            let xPos=(textXPercent/100)*(finalW-tWidth);
+            let yPos=(textYPercent/100)*(finalH-tHeight);
+
+            const margin=textFillMargin;
+            const rad=textRotation*Math.PI/180;
+            const cx=xPos+tWidth*0.5;
+            const cy=yPos+tHeight*0.5;
+            tempCtx.translate(cx,cy);
+            tempCtx.rotate(rad);
+            tempCtx.translate(-cx,-cy);
+
+            function drawRoundedRect2(ctx,x,y,w,h,r){
+              ctx.beginPath();
+              ctx.moveTo(x+r,y);
+              ctx.lineTo(x+w-r,y);
+              ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+              ctx.lineTo(x+w,y+h-r);
+              ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+              ctx.lineTo(x+r,y+h);
+              ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+              ctx.lineTo(x,y+r);
+              ctx.quadraticCurveTo(x,y,x+r,y);
+              ctx.closePath();
+            }
+
+            if(textFillOpacity>0){
+              tempCtx.save();
+              tempCtx.globalAlpha=textFillOpacity;
+              tempCtx.fillStyle=textFillColor;
+              drawRoundedRect2(tempCtx,xPos-margin,yPos-margin,tWidth+2*margin,tHeight+2*margin,textCornerRadius);
+              tempCtx.fill();
+              tempCtx.restore();
+            }
+
+            tempCtx.fillStyle=textColor;
+            tempCtx.fillText(textWatermark,xPos,yPos+tHeight);
+
+            if(textBorderThickness>0){
+              tempCtx.save();
+              tempCtx.globalAlpha=textBorderOpacity;
+              tempCtx.strokeStyle=textBorderColor;
+              tempCtx.lineWidth=textBorderThickness;
+              drawRoundedRect2(tempCtx,xPos-margin,yPos-margin,tWidth+2*margin,tHeight+2*margin,textCornerRadius);
+              tempCtx.stroke();
+              tempCtx.restore();
+            }
+
+            tempCtx.restore();
+          }
+
+          // toBlob
+          const imgBlob=await canvasToBlob(tempCanvas,"image/jpeg",quality);
+
+          // figure out filename
+          let baseName=file.name;
+          let dotIndex=baseName.lastIndexOf(".");
+          let ext="";
+          if(dotIndex>=0){
+            ext=baseName.substring(dotIndex);
+            baseName=baseName.substring(0,dotIndex);
+          }
+          let finalName="";
+          if(filenameMode==="same"){
+            finalName=file.name;
+          } else if(filenameMode==="watermark"){
+            finalName=`${baseName}-Watermark${ext}`;
+          } else {
+            finalName=`${customName}${i+1}.jpg`;
+          }
+
+          zip.file(finalName, imgBlob);
+
+          progressBar.value=i+1;
+          progressText.textContent=`Processing ${i+1} of ${images.length} images...`;
+
+          if(i%50===0){
+            await new Promise(r=>setTimeout(r,10));
+          }
+
+        } catch(err){
+          console.error("Error processing image",i,err);
+        }
+      }
+
+      try{
+        const zipBlob=await zip.generateAsync({type:"blob"});
+        const link=document.createElement("a");
+        link.href=URL.createObjectURL(zipBlob);
+        link.download="watermarked_images.zip";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        progressText.textContent="Completed!";
+      } catch(e){
+        console.error("Error generating zip",e);
+        progressText.textContent="Error generating ZIP.";
+      }
+    }
+
+    function canvasToBlob(canvas,mimeType,quality){
+      return new Promise((resolve,reject)=>{
+        canvas.toBlob((blob)=>{
+          if(blob) resolve(blob);
+          else reject(new Error("canvas.toBlob() failed"));
+        },mimeType,quality);
+      });
+    }
+  </script>
+</body>
+</html>
+
+
